@@ -20,22 +20,25 @@ SoftwareSerial stSerial(rx, tx);
 
 int timer = 0;
 
+void commandHandle(String msg);
+
 /* If a new message arrives, do this */
 void onMsghandler(char *topic, uint8_t* msg, unsigned int msglen) {
-    Serial.print("Incoming message --> ");
+    Serial.print("[MicroGear] Incoming message --> ");
     msg[msglen] = '\0';
     Serial.println((char *)msg);
+    commandHandle(String((char *) msg));
 }
 
 void onFoundgear(char *attribute, uint8_t* msg, unsigned int msglen) {
-    Serial.print("Found new member --> ");
+    Serial.print("[MicroGear] Found new member --> ");
     for (int i=0; i<msglen; i++)
         Serial.print((char)msg[i]);
     Serial.println();  
 }
 
 void onLostgear(char *attribute, uint8_t* msg, unsigned int msglen) {
-    Serial.print("Lost member --> ");
+    Serial.print("[MicroGear] Lost member --> ");
     for (int i=0; i<msglen; i++)
         Serial.print((char)msg[i]);
     Serial.println();
@@ -43,7 +46,7 @@ void onLostgear(char *attribute, uint8_t* msg, unsigned int msglen) {
 
 /* When a microgear is connected, do this */
 void onConnected(char *attribute, uint8_t* msg, unsigned int msglen) {
-    Serial.print("[MicroGear] connected to NETPIE as ");
+    Serial.print("[MicroGear] connected to NETPIE as ALIAS : ");
     Serial.println(ALIAS);
     /* Set the alias of this microgear ALIAS */
     microgear.setAlias(ALIAS);
@@ -58,7 +61,7 @@ void setup() {
   Serial.println("serial comm connected.");
 
   // setup software serial
-//  stSerial.begin(115200);
+  stSerial.begin(115200);
 
   // connect to the WiFi
   Serial.print("[WiFi] connecting to ");
@@ -98,14 +101,14 @@ void setup() {
   microgear.connect(APPID);
 }
 
-void processPayload(String payload);
-
 void loop() {
     /* To check if the microgear is still connected */
   if (microgear.connected()) {
 
       /* Call this method regularly otherwise the connection may be lost */
       microgear.loop();
+
+      commandHandle("echo hello");
   }
   else {
     while (!microgear.connected()) {
@@ -124,33 +127,28 @@ void loop() {
     WiFi.begin(ssid, pswd);
     delay(1000);
   }
-    delay(5000);
+  delay(5000);
 }
 
-void processPayload(String payload) {
-  // TODO processPayload
-  return;
-}
-
-void commandHandle(String cmd, String param) {
+void commandHandle(String msg) {
   // TODO commandHandle
-  String command = "";
+  String command = msg;
   
   // send to STM32
   Serial.print("[STM32] send to STM32 : ");
   Serial.println(command);
-//  stSerial.println(command);
+  stSerial.println(command);
 
   // read the respond from STM32
-//  String respond = "";
-//  while (stSerial.available() > 0) {
-//    char c = stSerial.read();
-//  }
-//  if (!respond.equals("")) {
-//    Serial.print("[STM32] respond : ");
-//    Serial.println("respond");
-//  } else {
-//    Serial.println("[STM32] no respond.");
-//  }
+  String respond = "";
+  while (stSerial.available() > 0) {
+    char c = stSerial.read();
+  }
+  if (!respond.equals("")) {
+    Serial.print("[STM32] respond : ");
+    Serial.println("respond");
+  } else {
+    Serial.println("[STM32] no respond.");
+  }
   return;
 }
