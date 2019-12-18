@@ -96,7 +96,7 @@ void loop() {
     /* Call this method regularly otherwise the connection may be lost */
     microgear.loop();
 
-    sendCommand("echo hello");
+    sendCommand("echo hello 1 2 3");
   }
   else {
 
@@ -243,22 +243,21 @@ void sendCommand(String cmd) {
   Serial.println(cmd);
 
   // send the command to STM32
-  stSerial.println(cmd);
+  stSerial.print(cmd);
 
   // read the respond from STM32
   String respond = "";
   while (stSerial.available() > 0) {
     char c = stSerial.read();
-    respond.concat(c);
+    if (c != '\0')
+      respond.concat(c);
+    else
+      break;
   }
 
   // check the respond
-  if (respond.equals("") != 0) {
-    Serial.print("[STM32] respond : ");
-    Serial.println("respond");
-  } else {
-    Serial.println("[STM32] no respond.");
-  }
+  Serial.print("[STM32] respond : ");
+  Serial.println(respond);
 
   return;
 
