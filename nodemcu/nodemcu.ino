@@ -19,9 +19,10 @@ const byte tx = 15;
 SoftwareSerial stSerial(rx, tx);
 
 // configures
-int office = 0;
-int game   = 0;
-int alarm  = 0;
+int inMode = 0;
+int office = 1;
+int game   = 1;
+int isplay = 0;
 
 void messageHandle(String msg);
 void commandHandle(String cmd);
@@ -45,7 +46,7 @@ void setup() {
   Serial.println("serial comm connected.");
 
   // setup software serial
-  stSerial.begin(115200);
+  stSerial.begin(9600);
 
   // connect to the WiFi
   Serial.print("[WiFi] connecting to ");
@@ -91,12 +92,18 @@ void setup() {
 
 void loop() {
   /* To check if the microgear is still connected */
+  Serial.print("[MCU] config ");
+  Serial.print(inMode);
+  Serial.print(" ");
+  Serial.print(office);
+  Serial.print(" ");
+  Serial.println(game);
   if (microgear.connected()) {
 
     /* Call this method regularly otherwise the connection may be lost */
     microgear.loop();
 
-    sendCommand("echo hello 1 2 3");
+//    sendCommand("sudo echo hello 1 2 3");
   }
   else {
 
@@ -120,9 +127,13 @@ void loop() {
     WiFi.begin(ssid, pswd);
     delay(1000);
 
+    if (WiFi.status() == WL_CONNECTED) {
+      Serial.println("[WiFi] reconnected.");
+    }
+
   }
 
-  delay(5000);
+  delay(1000);
 
 }
 
@@ -148,24 +159,24 @@ void messageHandle(String msg) {
 }
 
 void commandHandle(String cmd) {
-  if (cmd.equals("apply") == 0) {
+  if (cmd.equals("apply")) {
 
     String newCmd = "";
-    newCmd.concat("set config ");
+    newCmd.concat("config set ");
+    newCmd.concat(inMode);
+    newCmd.concat(" ");
     newCmd.concat(office);
     newCmd.concat(" ");
     newCmd.concat(game);
-    newCmd.concat(" ");
-    newCmd.concat(alarm);
 
     sendCommand(newCmd);
 
     Serial.print("[MicroGear] apply configure change ");
+    Serial.print(inMode);
+    Serial.print(" ");
     Serial.print(office);
     Serial.print(" ");
     Serial.print(game);
-    Serial.print(" ");
-    Serial.print(alarm);
     Serial.println(".");
 
   } else {
@@ -179,52 +190,70 @@ void commandHandle(String cmd) {
 
 }
 
+void printConfig(String param, int argInt) {
+    Serial.print("[MicroGear] save configure ");
+    Serial.print(param);
+    Serial.print(" ");
+    Serial.println(argInt);
+}
+
 void configure(String param, int argInt) {
 
-  if (param.equals("office") == 0) {
-
-    int maxRange = 0;
+  if (param.equals("mode")) {
+    
     int minRange = 0;
+    int maxRange = 1;
+    if (argInt >= minRange && argInt <= maxRange) {
+
+      // TODO
+      inMode = argInt;
+
+      printConfig(param, argInt);
+    } else {
+      Serial.print("[MicroGear] argument out of range.");
+    }
+  } else if (param.equals("office")) {
+
+    int minRange = 1;
+    int maxRange = 12;
     if (argInt >= minRange && argInt <= maxRange) {
 
       // TODO
       office = argInt;
 
-      Serial.print("[MicroGear] save configure ");
-      Serial.print(param);
-      Serial.print(" ");
-      Serial.println(argInt);
-
+      printConfig(param, argInt);
+    } else {
+      Serial.print("[MicroGear] argument out of range.");
     }
-  } else if (param.equals("game") == 0) {
+  } else if (param.equals("game")) {
 
-    int maxRange = 0;
-    int minRange = 0;
+    int minRange = 1;
+    int maxRange = 12;
     if (argInt >= minRange && argInt <= maxRange) {
 
       // TODO
       game = argInt;
 
-      Serial.print("[MicroGear] save configure ");
-      Serial.print(param);
-      Serial.print(" ");
-      Serial.println(argInt);
-
+      printConfig(param, argInt);
+    } else {
+      Serial.print("[MicroGear] argument out of range.");
     }
-  } else if (param.equals("alarm") == 0) {
-
-    int maxRange = 0;
+  } else if (param.equals("isplay")) {
+    
     int minRange = 0;
+    int maxRange = 1;
     if (argInt >= minRange && argInt <= maxRange) {
 
       // TODO
-      alarm = argInt;
+      isplay = argInt;
 
-      Serial.print("[MicroGear] save configure ");
-      Serial.print(param);
-      Serial.print(" ");
-      Serial.println(argInt);
-
+      String cmd = "config isplay ";
+      cmd.concat(argInt);
+      cmd.concat(" 0 0");
+      sendCommand(cmd);
+      
+    } else {
+      Serial.print("[MicroGear] argument out of range.");
     }
   } else {
 
@@ -243,7 +272,7 @@ void sendCommand(String cmd) {
   Serial.println(cmd);
 
   // send the command to STM32
-  stSerial.print(cmd);
+  stSerial.println(cmd);
 
   // read the respond from STM32
   String respond = "";
@@ -265,21 +294,21 @@ void sendCommand(String cmd) {
 
 /* If a new message arrives, do this */
 void onMsghandler(char *topic, uint8_t* msg, unsigned int msglen) {
-  Serial.print("[MicroGear] Incoming message --> ");
+  Serial.print("[MicroGear] READ << ");
   msg[msglen] = '\0';
   Serial.println((char *)msg);
   messageHandle(String((char *) msg));
 }
 
 void onFoundgear(char *attribute, uint8_t* msg, unsigned int msglen) {
-  Serial.print("[MicroGear] Found new member --> ");
+  Serial.print("[MicroGear] FOUND << ");
   for (int i = 0; i < msglen; i++)
     Serial.print((char)msg[i]);
   Serial.println();
 }
 
 void onLostgear(char *attribute, uint8_t* msg, unsigned int msglen) {
-  Serial.print("[MicroGear] Lost member --> ");
+  Serial.print("[MicroGear] LOST << ");
   for (int i = 0; i < msglen; i++)
     Serial.print((char)msg[i]);
   Serial.println();
